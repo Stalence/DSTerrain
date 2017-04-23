@@ -1,6 +1,4 @@
-//2184 Fwteinh Bekiaroudh, 2167 Nikolaos Karalias
-//Procedural terrain
-
+#include <cstdio>
 #include <stdlib.h>
 #include <glut.h>
 #include <stdio.h>
@@ -8,15 +6,21 @@
 #include <algorithm>
 #include <math.h>
 #include <random>
-#include <time.h> 
+#include <time.h>  
+#include <lodepng.h>
 
+
+//using namespace cv;
+
+
+//2184,2167 Bekiaroudh, Karalias
 const int bounds = 513;
 
 float left = -(bounds - 1) / 2.0 + 1000;
 float right = (bounds - 1) / 2.0 - 1000;
 float bottom = -1 * (bounds - 1) - 800;
 float top = 1 * (bounds - 1) + 700;
-float near = (bounds - 1)+1500 ;
+float near = (bounds - 1)+2500 ;
 float far = -(bounds - 1)-5500 ;
 
 GLint window; 
@@ -28,12 +32,15 @@ int style = 0;
 
 float terrain[bounds][bounds] ;
 float tempo[bounds - 1][bounds - 1];
-float height =1;
+float intensities[bounds-1][bounds-1] = { { 0 } };
+float height =300;
 
 int smoothing = 1;
 int elevationobs = 1;
 int topocheck = 1;
 int diamondsquare = 1;
+int medianf = 0;
+int olympus = 0;
 
 float toporadius = 150;
 
@@ -93,6 +100,7 @@ int limit = 1;
 //	if (dataPos == 0)      dataPos = 54;
 //
 //}
+
 
 
 void observer(int key, int x, int y) //move around on scene with keyboard 
@@ -289,7 +297,7 @@ void median()
 				}
 			}
 			std::sort(mask.begin(), mask.end());
-			terrain[i][j] = mask[3];
+			terrain[i][j] = mask[4];
 
 		}
 	}
@@ -331,6 +339,7 @@ void clampintensity()
 			}*/
 		}
 	}
+	std::cout << max / range << "\n";
 }
 
 void generatev2()
@@ -373,18 +382,22 @@ void generatev2()
 			   if (topocheck)
 			   {
 				   float  topocircdist = sqrt((centerx - (bounds - 1) / 2)*(centerx - (bounds - 1) / 2) + (centery - (bounds - 1) / 2)*(centery - (bounds - 1) / 2));
-				   if (topocircdist <= toporadius)
+				  if (topocircdist <= toporadius)
 				   {
 					   mean = 0;
-					   std = kay*expo;
+					   std = kay*expo ;
 				   }
 				   else
 				   {
 					   mean = 0;
-					   std = kay*expo*0.75;
+					   std = kay*expo*0.85;
 
 				   }
 			   }
+			 /*  if (topocheck)
+			   {
+				   mean = intensities[centerx][centery];
+			   }*/
 
 			   std::normal_distribution<float> distribution(mean, std);
 
@@ -393,9 +406,10 @@ void generatev2()
 			   if (topocheck)
 			   {
 				   float  topocircdist = sqrt((centerx - (bounds - 1) / 2)*(centerx - (bounds - 1) / 2) + (centery - (bounds - 1) / 2)*(centery - (bounds - 1) / 2));
-				   if (topocircdist <= toporadius)
+				  if (topocircdist <= toporadius)
 				   {
-					   topocircfact = topocircdist*0.1;
+					   topocircfact = topocircdist*0.1 ;
+					   //std::cout << "topofact" << topocircfact << "\n";
 				   }
 			   }
 
@@ -437,11 +451,12 @@ void generatev2()
 
 
 
-			   float topocircfact =1;
+			   float topocircfact = 1;
 
 			   if (topocheck)
 			   {
 				   float  topocircdist = sqrt((centerx - (bounds - 1) / 2)*(centerx - (bounds - 1) / 2) + (centery - (bounds - 1) / 2)*(centery - (bounds - 1) / 2));
+				   
 				   if (topocircdist <= toporadius)
 				   {
 					   mean = 0;
@@ -450,7 +465,7 @@ void generatev2()
 				   else
 				   {
 					   mean = 0;
-					   std = kay*expo*0.75;
+					   std = kay*expo*0.85;
 
 				   }
 			   }
@@ -468,8 +483,13 @@ void generatev2()
 				   {
 					   topocircfact = topocircdist*0.1;
 				   }
+				  // topocircfact = 1 ;
 			   }
 
+				 /*  intensities[centerx][miny]
+				   intensities[centerx][maxy]
+				   intensities[minx][centery]
+				   intensities[maxx][centery]*/
 
 			   float randfact1 = distribution(generator)*Roughness*topocircfact;
 			   float randfact2 = distribution(generator)*Roughness*topocircfact;
@@ -520,6 +540,8 @@ void generatev2()
 				   //  std::cout << "Centerx : " << centerx << " Centery : " << centery << " Miny : " << miny << " Maxy : " << maxy << " Minx : " << minx << " Maxx : " << maxx << "\n";
 			   }
 
+
+			  
 			   terrain[centerx][miny] = (((terrain[minx][miny] * 1 + terrain[maxx][miny] * 1 + terrain[centerx][centery] * dsq + diamond1 * 1) / divdiam)*1.0 + randfact2 * 1.0 / 1.0);
 			   terrain[centerx][maxy] = (((terrain[minx][maxy] * 1 + terrain[maxx][maxy] * 1 + terrain[centerx][centery] * dsq + diamond2 * 1) / divdiam)*1.0 + randfact3 * 1.0 / 1.0);
 			   terrain[minx][centery] = (((terrain[minx][miny] * 1 + terrain[minx][maxy] * 1 + terrain[centerx][centery] * dsq + diamond3 * 1) / divdiam)*1.0 + randfact4 * 1.0 / 1.0);
@@ -755,7 +777,26 @@ void terraingen()
 	generatev2();
 
 	clampintensity();
-	//median();
+
+	if (olympus)
+	{
+		float mean = 0;
+		float std = pow(2, -10.1*Roughness2);
+		std::normal_distribution<float> distro(mean, std);
+		for (int i = 0; i < bounds; ++i)
+		{
+			for (int j = 0; j < bounds; ++j)
+			{
+				terrain[i][j] = intensities[i][j] / 255.0 + distro(generator);
+
+			}
+		}
+	}
+
+	if (medianf)
+	{
+		median();
+	}
 	if (smoothing)
 	{
 		movingavg();
@@ -763,11 +804,11 @@ void terraingen()
 	/*movingavg();
 	movingavg();*/
    
-	GLfloat dif1[4] = { 0.3, 0.45, 0.0, 1.0 };
-	
-	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, dif1);
+
 	glPushMatrix();
 	glRotatef(0, 1, 0, 0);
+
+	
 
 	for (int k = 3; k < bounds-3; ++k)
 	{
@@ -776,12 +817,38 @@ void terraingen()
 		for (int j = 3; j < bounds-3; ++j)
 		{	
 			
+			float height1 = height;
+
+		/*	if (topocheck)
+			{
+
+				float  topocircdist = sqrt((k - (bounds - 1) / 2)*(k - (bounds - 1) / 2) + (j - (bounds - 1) / 2)*(j - (bounds - 1) / 2));
+				if (topocircdist <= toporadius)
+				{
+					height1 = 1.05*height;
+				}
+
+			}*/
 
 			float intensity = terrain[k][j];
 			if (intensity > 1)
 			{
-			//	std::cout << " Coordx : " << terrain[k][j] << "\n";
+				//	std::cout << " Coordx : " << terrain[k][j] << "\n";
 			}
+
+		
+
+					GLfloat dif1[4] = { 0.3 + 1. * intensity, 0.25 + 1. * intensity, 0.1 + 1. * intensity, 1.0 };
+					GLfloat spec1[4] = { 0.0, 0.0, 0.0, 1.0 };
+					glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, dif1);
+					glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, spec1);
+					glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 0);
+
+					
+					//std::cout << "topofact" << topocircfact << "\n";
+	
+
+
 
 			glColor3f( terrain[k][j], terrain[k][j] , 0.0);
 			GLfloat norm[3] = {};
@@ -800,7 +867,7 @@ void terraingen()
 
 			GLfloat point[3] = {};
 			point[0] = 1 * (k - (bounds - 1) / 2);
-			point[1] = terrain[k][j] * height;
+			point[1] = terrain[k][j] * height1;
 			point[2] = 1 * (j - (bounds - 1) / 2);
 			//std::cout << "Point x: " << point[0] << " Point y: " << point[1] << " Point z: " << point[2] << "\n";
 			
@@ -810,7 +877,7 @@ void terraingen()
 
 			GLfloat point3[3] = {};
 			point3[0] = (float)k - 1 - ((bounds - 1) / 2);
-			point3[1] = terrain[k - 1][j] * height;
+			point3[1] = terrain[k - 1][j] * height1;
 			point3[2] = (float)j - ((bounds - 1) / 2);
 			if ((k == 200) && (j == 1))	std::cout << "Point3 x: " << point3[0] << " Point y: " << point3[1] << " Point z: " << point3[2] << " obsx : " << obsx << " obsy : " << obsy << " obsz " << obsz << "\n";
 
@@ -820,7 +887,7 @@ void terraingen()
 
 			GLfloat point2[3] = {};
 			point2[0] = (float)k - ((bounds - 1) / 2);
-			point2[1] = terrain[k][j - 1] * height;
+			point2[1] = terrain[k][j - 1] * height1;
 			point2[2] = (float)j - 1 - ((bounds - 1) / 2);
 			//std::cout << "Point2 x: " << point2[0] << " Point y: " << point2[1] << " Point z: " << point2[2] << "\n";
 
@@ -831,7 +898,7 @@ void terraingen()
 
 			GLfloat point1[3] = {};
 			point1[0] = (float)k - 1 - ((bounds - 1) / 2);
-			point1[1] = terrain[k - 1][j - 1] * height;
+			point1[1] = terrain[k - 1][j - 1] * height1;
 			point1[2] = (float)j - 1 - ((bounds - 1) / 2);
 			//std::cout << "Point1 x: " << point1[0] << " Point y: " << point1[1] << " Point z: " << point1[2] << "\n";
 
@@ -1003,7 +1070,7 @@ void Jerry(int state, int button,int x, int y)
 		memset(tempo, 0.00, sizeof(tempo[0][0]) * bounds-1 *bounds-1);
 		memset(terrain, 0.00, sizeof(terrain[0][0]) * bounds *bounds);
 		genseed = seeds(seeder);
-		std::cout << genseed << "\n";
+		//std::cout << genseed << "\n";
 		glutPostRedisplay();
 
 	}
@@ -1050,6 +1117,38 @@ void planetes()
 */
 }
 
+
+void cvtest()
+{
+	std::vector<unsigned char> image; //the raw pixels
+	unsigned width , height;
+
+	//decode
+	unsigned error = lodepng::decode(image, width, height, "C:\\Users\\Aspect\\Documents\\Work\\Tempo\\olympus terrain\\olympheight2.png");
+
+	//if there's an error, display it
+	if (error) std::cout << "decoder error " << error << ": " << lodepng_error_text(error) << std::endl;
+
+	std::cout << " Height : " << image.size() << " Width: " << width << "\n";
+	int index = 0;
+	int columns = 0;
+	int rows = 0;
+	int runs = 0;
+	intensities[0][0]= (float)image[index];
+	
+
+	while (runs<262144)
+	{
+		index += 4;
+		runs += 1;
+		rows = floor(runs / 512.0);
+		columns = runs % 512;
+		//std::cout << "Intensities " << intensities[rows][columns] << "\n;";// " Image " << (float)image[index] << "\n";
+		intensities[rows][columns] = (float)image[index];
+		
+	}
+}
+
 void display()
 {
 
@@ -1063,7 +1162,10 @@ void display()
 	*/
 	generator.seed(genseed*100);
 
-
+	if (olympus)
+	{
+		cvtest();
+	}
 
 	glPushMatrix();
 	float camerax = 650 * cos(viewangle*pi / 180.0);
@@ -1071,7 +1173,7 @@ void display()
 	gluLookAt(camerax, obsy, cameraz, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);        //set up viewing
 
 	GLfloat pos[] = { 270, 2500, 270, 1 };//position vector, 4th slot = 1--> positional light, 4th slot = 0 -->directional light
-	GLfloat dif[] = { 0.3, 0.85, 0.0, 1.0 }; //diffuse vector
+	GLfloat dif[] = { 0.6, 0.6, 0.6, 1.0 }; //diffuse vector
 	GLfloat spec[] = { 0.00, 0.00, 0.0, 1.0 }; // specular vector
 	GLfloat amb[] = { 0.1, 0.1, 0.1, 1.0 };// //ambient vector
 	glLightfv(GL_LIGHT0, GL_POSITION, pos);
@@ -1079,7 +1181,7 @@ void display()
 	glLightfv(GL_LIGHT0, GL_SPECULAR, spec);
 	glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 0.0);
 	glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, 0.000);
-	glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0.0000005);
+	glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0.0000003);
 	glEnable(GL_LIGHT0);
 	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, amb);
 
@@ -1121,6 +1223,14 @@ void menu(int Selection)
 	{
 		diamondsquare = (diamondsquare + 1) % 2;
 	}
+	else if (Selection == 5)
+	{
+		medianf = (medianf + 1) % 2;
+	}
+	else if (Selection == 6)
+	{
+		olympus = (olympus + 1) % 2;
+	}
 	glutPostRedisplay(); /* the window needs redrawing */
 }
 
@@ -1133,6 +1243,8 @@ void create_menu(void)
 	glutAddMenuEntry("Circle topography", 2);
 	glutAddMenuEntry("Elevation/Observer", 3);
 	glutAddMenuEntry("Diamond/Square", 4);
+	glutAddMenuEntry("Median", 5);
+	glutAddMenuEntry("Olympus", 6);
 	glutAddMenuEntry("Quit", 0);
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
 }
@@ -1159,6 +1271,12 @@ int main(int argc, char** argv)
 	genseed = seeds(generator);
 
 	init();
+
+
+
+
+
+
 	glutMainLoop();             /* loop forever & start displaying */
 	return 1;
 
